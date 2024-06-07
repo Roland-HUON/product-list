@@ -1,5 +1,9 @@
-import { Fragment, useState } from "react"
+import { useState } from "react";
 import PropTypes from "prop-types";
+import { Input } from "./component/forms/input"
+import { Checkbox } from "./component/forms/checkbox"
+import { ProductCategoryRow } from "./component/products/productCategoryRow";
+import { ProductRow } from "./component/products/productRow";
 
 const PRODUCTS = [  
   {category: "Fruits", price: "$1", stocked: true, name: "Apple"},  
@@ -11,66 +15,95 @@ const PRODUCTS = [
 ]
 
 function App() {
-  const [productName, setProductName] = useState("Search...")
-  const [checked, setChecked] = useState(false)
 
-  return <Fragment>
-    <input type="text" value={productName} onChange={e => setProductName(e.target.value)} />
-    <CheckedBox checked={checked} onCheck={setChecked}/>
-    <div>
-      <h2>Name</h2>
-      <h2>Price</h2>
-    </div>
-    <VegetablesFruits/>
-  </Fragment>
-}
+  const [showStockedOnly, setShowStockedOnly] = useState(false)
+  const [search, setSearch] = useState("")
+  const [range,setRange] = useState(0)
 
-function CheckedBox({checked, onCheck}){
-  return <label>
-    <input 
-      type="checkbox"
-      onChange={(e)=> onCheck(e.target.checked)}
-      checked={checked}
+  const visibleProducts = PRODUCTS.filter(product => {
+    if(showStockedOnly && !product.stocked){
+      return false
+    }
+    if(search && !product.name.toLowerCase().includes(search.toLowerCase())){
+      return false
+    }
+    if(range && product.price.length < range){
+      return false
+    }
+    return true
+  })
+  console.log(range)
+  return <div className="container my-3">
+    <SearchBar 
+      range={range}
+      onRangeChange={setRange}
+      search={search}
+      onSearchChange={setSearch}
+      showStockedOnly={showStockedOnly} 
+      onStockedOnlyChange={setShowStockedOnly}
     />
-    Show only products in stock
-  </label>
-}
-
-CheckedBox.propTypes = {
-  checked: PropTypes.bool.isRequired,
-  onCheck: PropTypes.func.isRequired
-}
-
-function VegetablesFruits(){
-  const Fruit = () => {
-    const listFruits = PRODUCTS.filter(product => product.category === "Fruits")
-    return listFruits.map((fruit, index) => {
-      return <div key={index}>
-        <h3>{fruit.name}</h3>
-        <h3>{fruit.price}</h3>
-      </div>
-    })
-  }
-  const Vegetable = () => {
-    const listVegetable = PRODUCTS.filter(product => product.category === "Vegetables")
-    return listVegetable.map((vegetable, index) => {
-      return <div key={index}>
-        <h3>{vegetable.name}</h3>
-        <h3>{vegetable.price}</h3>
-      </div>
-    })
-  }
-
-  return <div>
-    <h2>Fruits</h2>
-    <div className="fruits">
-      <Fruit/>
-    </div>
-    <h2>Vegetables</h2>
-    <div className="vegetables">
-      <Vegetable/>
-    </div>
+    <ProductTable products={visibleProducts}/>
   </div>
 }
 
+function SearchBar({showStockedOnly, onStockedOnlyChange, search, onSearchChange, range, onRangeChange}){
+  return <div>
+    <div className="mb-3">
+      <Input 
+        value={search} 
+        onChange={onSearchChange} 
+        placeholder="Search..."/>
+      <input 
+        type="range"
+        className="form-range"
+        min={0}
+        max={10}
+        value={range}
+        onChange={(e)=>onRangeChange(e.target.value)}
+      />
+      <Checkbox 
+        id="stocked" 
+        checked={showStockedOnly} 
+        onChange={onStockedOnlyChange} 
+        label="Show only available products"/>
+    </div>
+  </div>
+}
+SearchBar.propTypes = {
+  search : PropTypes.string.isRequired,
+  onSearchChange : PropTypes.func.isRequired,
+  range : PropTypes.number.isRequired,
+  onRangeChange : PropTypes.func.isRequired,
+  showStockedOnly : PropTypes.bool.isRequired,
+  onStockedOnlyChange : PropTypes.func.isRequired
+}
+
+function ProductTable({products}){
+  const rows = []
+  let lastCategory = null
+
+  for (let product of products){
+    if(product.category !== lastCategory){
+      rows.push(<ProductCategoryRow key={product.category} category={product.category}/>)
+    }
+    lastCategory = product.category
+    rows.push(<ProductRow key={product.name} product={product}/>)
+  }
+
+  return <table className="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      {products.map(product => <ProductRow key={product.name} product={product}/>)}
+    </tbody>
+  </table>
+}
+
+ProductTable.propTypes = {
+  products : PropTypes.array.isRequired
+}
 export default App
